@@ -1,0 +1,83 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Resources": {
+    "BMWPayLambdaExecutionRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "RoleName": "bmwpay-env1-lambda-cw-logs-to-os-role",
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "lambda.amazonaws.com"
+              },
+              "Action": "sts:AssumeRole"
+            }
+          ]
+        },
+        "ManagedPolicyArns": [
+          "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+        ],
+        "Policies": [
+          {
+            "PolicyName": "CloudWatchAndOpenSearchAccess",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "logs:CreateLogGroup",
+                    "logs:CreateLogStream",
+                    "logs:PutLogEvents"
+                  ],
+                  "Resource": "*"
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "es:ESHttpPost",
+                    "es:ESHttpPut",
+                    "es:ESHttpGet"
+                  ],
+                  "Resource": "arn:aws:es:<region>:<account-id>:domain/<your-domain-name>/*"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "BMWPayCloudWatchToOSLambda": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "FunctionName": "bmwpay-env1-lambda-cw-logs-to-os",
+        "Handler": "index.handler",
+        "Runtime": "nodejs18.x",
+        "Role": {
+          "Fn::GetAtt": ["BMWPayLambdaExecutionRole", "Arn"]
+        },
+        "Code": {
+          "S3Bucket": "your-s3-bucket",
+          "S3Key": "path/to/your-lambda-code.zip"
+        },
+        "Timeout": 60,
+        "MemorySize": 128
+      }
+    }
+  },
+  "Outputs": {
+    "LambdaFunctionName": {
+      "Value": {
+        "Ref": "BMWPayCloudWatchToOSLambda"
+      }
+    },
+    "LambdaRoleArn": {
+      "Value": {
+        "Fn::GetAtt": ["BMWPayLambdaExecutionRole", "Arn"]
+      }
+    }
+  }
+}
